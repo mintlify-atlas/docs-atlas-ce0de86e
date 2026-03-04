@@ -1,97 +1,209 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Bookmark Deeploy
+mode: custom
 ---
 
-## Setting up
+<div className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 dark:from-blue-900 dark:via-blue-800 dark:to-indigo-900 py-20">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Organize your bookmarks with ease
+        </h1>
+        <p className="text-lg sm:text-xl text-blue-100 max-w-2xl mb-8">
+          A full-stack bookmark management application for organizing and categorizing your favorite links. Built with Cloudflare Workers, React, and PostgreSQL.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors"
+          >
+            Get Started
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+          <a 
+            href="/api/overview" 
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+          >
+            View API Reference
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-2xl transform rotate-3 opacity-20"></div>
+          <div className="relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+            <div className="space-y-4">
+              <div className="h-3 bg-white/30 rounded w-3/4"></div>
+              <div className="h-3 bg-white/30 rounded w-1/2"></div>
+              <div className="h-3 bg-white/30 rounded w-5/6"></div>
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                <div className="h-16 bg-white/20 rounded-lg"></div>
+                <div className="h-16 bg-white/20 rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Quick Start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get up and running with Bookmark Deeploy in minutes
+  </p>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Clone the repository">
+      Clone the Bookmark Deeploy repository and navigate to the project directory.
+      
+      ```bash
+      git clone https://github.com/BilsoNyuMNAM/bookmarkDeeploy.git
+      cd bookmarkDeeploy
+      ```
+    </Step>
+    
+    <Step title="Set up the database">
+      Configure your PostgreSQL database with Prisma Accelerate and run migrations.
+      
+      ```bash
+      cd Backend
+      npm install
+      npx prisma migrate deploy
+      ```
+      
+      <Note>
+        You'll need a Prisma Accelerate connection URL. See the [database setup guide](/guides/database-setup) for details.
+      </Note>
+    </Step>
+    
+    <Step title="Configure environment variables">
+      Set up your environment variables for the backend worker.
+      
+      ```bash
+      # Add to wrangler.toml or use wrangler secrets
+      wrangler secret put DATABASE_URL
+      ```
+    </Step>
+    
+    <Step title="Start the development servers">
+      Run the backend and frontend in development mode.
+      
+      ```bash
+      # Terminal 1 - Backend
+      cd Backend
+      npm run dev
+      
+      # Terminal 2 - Frontend
+      cd frontend
+      npm install
+      npm run dev
+      ```
+      
+      Your application is now running! The frontend is available at `http://localhost:5173`.
+    </Step>
+  </Steps>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Key Features
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Everything you need to manage your bookmarks efficiently
+  </p>
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Save bookmarks with categories"
+      icon="bookmark"
+      href="/features/bookmarks"
+    >
+      Organize your links with custom categories and descriptions for easy retrieval.
+    </Card>
+    <Card
+      title="Filter and search"
+      icon="filter"
+      href="/features/filtering"
+    >
+      Filter bookmarks by category and date to quickly find what you need.
+    </Card>
+    <Card
+      title="Cloudflare Workers backend"
+      icon="cloud"
+      href="/deployment/cloudflare"
+    >
+      Lightning-fast edge computing with Hono framework and Prisma ORM.
+    </Card>
+    <Card
+      title="Modern React frontend"
+      icon="react"
+      href="/guides/frontend-setup"
+    >
+      Beautiful, responsive UI built with React, Vite, and TailwindCSS.
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Explore the Documentation
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Dive deeper into features, deployment, and configuration
+  </p>
 
-Everything you need to create world-class documentation.
+  <CardGroup cols={3}>
+    <Card
+      title="Features"
+      icon="sparkles"
+      href="/features/bookmarks"
+    >
+      Learn about bookmark management, categories, and filtering capabilities.
+    </Card>
+    <Card
+      title="API Reference"
+      icon="code"
+      href="/api/overview"
+    >
+      Complete API documentation for all available endpoints.
+    </Card>
+    <Card
+      title="Deployment Guide"
+      icon="rocket"
+      href="/deployment/overview"
+    >
+      Deploy your own instance to Cloudflare Workers and configure the database.
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-800 dark:to-indigo-800 p-8 sm:p-12">
+    <div className="relative z-10">
+      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+        Ready to organize your bookmarks?
+      </h2>
+      <p className="text-lg text-blue-100 mb-6 max-w-2xl">
+        Start managing your bookmarks efficiently with Bookmark Deeploy. Follow our quickstart guide to get up and running in minutes.
+      </p>
+      <a 
+        href="/quickstart" 
+        className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors"
+      >
+        Get Started Now
+        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+    <div className="absolute top-0 right-0 -mt-4 -mr-4 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-64 h-64 bg-indigo-400/10 rounded-full blur-3xl"></div>
+  </div>
+</div>

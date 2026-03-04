@@ -1,0 +1,200 @@
+---
+title: Environment Variables & Secrets
+description: Configure environment variables and secrets for Bookmark Deeploy backend and frontend
+---
+
+This guide covers how to set up environment variables and secrets for both the Cloudflare Workers backend and the Vite-powered frontend.
+
+## Backend Environment Variables
+
+The backend runs on Cloudflare Workers and uses environment variables for database connections and application configuration.
+
+### Required Variables
+
+<Info>
+The backend uses Cloudflare Workers bindings to access environment variables securely at runtime.
+</Info>
+
+#### DATABASE_URL
+
+The primary database connection string used by Prisma Accelerate. This variable is accessed in your route handlers through the Cloudflare Workers environment context.
+
+**Usage in code:** `src/link/create.ts:6-7`
+
+```typescript
+type Bindings = {
+    DATABASE_URL: string
+}
+```
+
+The DATABASE_URL is then passed to the Prisma client:
+
+```typescript
+const prisma = getPrismaClient(c.env.DATABASE_URL)
+```
+
+### Setting Secrets in Cloudflare Workers
+
+<Steps>
+  <Step title="Set secrets via Wrangler CLI">
+    Use the Wrangler CLI to securely store sensitive values:
+
+    ```bash
+    wrangler secret put DATABASE_URL
+    ```
+
+    You'll be prompted to enter the secret value interactively.
+  </Step>
+
+  <Step title="Verify the secret was set">
+    List all secrets for your worker:
+
+    ```bash
+    wrangler secret list
+    ```
+  </Step>
+
+  <Step title="Update secrets as needed">
+    To update an existing secret, run the same command:
+
+    ```bash
+    wrangler secret put DATABASE_URL
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Never commit secrets to version control. Use Wrangler secrets for production and `.dev.vars` for local development only.
+</Warning>
+
+### Local Development
+
+For local development with `wrangler dev`, create a `.dev.vars` file in your Backend directory:
+
+```bash
+# Backend/.dev.vars
+DATABASE_URL="prisma://accelerate.prisma-data.net/?api_key=YOUR_API_KEY"
+```
+
+<Note>
+Add `.dev.vars` to your `.gitignore` to prevent accidentally committing secrets.
+</Note>
+
+### Wrangler Configuration
+
+Your `wrangler.jsonc` file defines the worker configuration:
+
+```jsonc Backend/wrangler.jsonc
+{
+  "name": "square-forest-972c",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+}
+```
+
+**Key configuration options:**
+- `nodejs_compat`: Enables Node.js compatibility for packages like Prisma
+- `observability.enabled`: Enables logging and monitoring in Cloudflare dashboard
+
+## Frontend Environment Variables
+
+The frontend is built with Vite and uses environment variables prefixed with `VITE_` to expose values to the client.
+
+### API Endpoint Configuration
+
+Currently, the API endpoint is hardcoded in the frontend components. To make it configurable, you should set up a Vite environment variable.
+
+<Steps>
+  <Step title="Create environment file">
+    Create a `.env` file in your `frontend` directory:
+
+    ```bash
+    # frontend/.env
+    VITE_API_URL=https://square-forest-972c.yumnambilson.workers.dev
+    ```
+  </Step>
+
+  <Step title="Access in your code">
+    Use `import.meta.env` to access Vite environment variables:
+
+    ```typescript
+    const API_URL = import.meta.env.VITE_API_URL
+    
+    fetch(`${API_URL}/link/showall`)
+    ```
+  </Step>
+
+  <Step title="Create environment-specific files">
+    You can create different environment files:
+
+    - `.env` - Default variables
+    - `.env.local` - Local overrides (gitignored by default)
+    - `.env.production` - Production-only variables
+    - `.env.development` - Development-only variables
+  </Step>
+</Steps>
+
+### Current API Endpoints
+
+The frontend currently uses these hardcoded endpoints:
+
+<CodeGroup>
+```typescript hooks/useBookmarkFilter.tsx
+fetch("https://square-forest-972c.yumnambilson.workers.dev/link/showall")
+```
+
+```typescript components/Card.tsx
+fetch(`https://square-forest-972c.yumnambilson.workers.dev/link/delete/${id}`, {
+  method: "DELETE"
+})
+```
+
+```typescript components/Bookmark.tsx
+fetch("https://square-forest-972c.yumnambilson.workers.dev/link/save", {
+  method: "POST"
+})
+```
+</CodeGroup>
+
+<Warning>
+Replace these hardcoded URLs with environment variables to support different environments (development, staging, production).
+</Warning>
+
+## Environment Variables Summary
+
+| Variable | Location | Purpose | Example |
+|----------|----------|---------|----------|
+| `DATABASE_URL` | Backend (Cloudflare Secret) | Prisma Accelerate connection | `prisma://accelerate.prisma-data.net/?api_key=...` |
+| `VITE_API_URL` | Frontend (.env) | Backend API endpoint | `https://your-worker.workers.dev` |
+
+## Best Practices
+
+<Steps>
+  <Step title="Never commit secrets">
+    Add these files to `.gitignore`:
+    - `.env.local`
+    - `.dev.vars`
+    - Any file containing API keys or passwords
+  </Step>
+
+  <Step title="Use different values per environment">
+    Maintain separate secrets for development, staging, and production environments.
+  </Step>
+
+  <Step title="Rotate secrets regularly">
+    Periodically update sensitive credentials, especially database connection strings.
+  </Step>
+
+  <Step title="Document required variables">
+    Create `.env.example` files showing which variables are needed (without actual values).
+  </Step>
+</Steps>
+
+## Next Steps
+
+- [Database Setup](/guides/database-setup) - Configure your PostgreSQL database with Prisma
+- [Frontend Setup](/guides/frontend-setup) - Set up the React frontend with Vite

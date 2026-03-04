@@ -1,0 +1,416 @@
+---
+title: Frontend Configuration & Development
+description: Set up and configure the React + Vite + Tailwind CSS frontend for Bookmark Deeploy
+---
+
+The Bookmark Deeploy frontend is a modern React application built with Vite, TypeScript, and Tailwind CSS. This guide covers installation, configuration, and development workflows.
+
+## Technology Stack
+
+- **Framework**: React 19.2.0
+- **Build Tool**: Vite 7.2.4
+- **Language**: TypeScript 5.9.3
+- **Styling**: Tailwind CSS 4.1.18
+- **Linting**: ESLint 9.39.1
+
+<Info>
+Vite provides instant server start, lightning-fast HMR (Hot Module Replacement), and optimized production builds.
+</Info>
+
+## Installation
+
+<Steps>
+  <Step title="Navigate to frontend directory">
+    ```bash
+    cd frontend
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+
+    This installs all dependencies from `package.json`:
+    - **Dependencies**: React and React DOM
+    - **Dev Dependencies**: Vite, TypeScript, Tailwind CSS, ESLint, and type definitions
+  </Step>
+
+  <Step title="Verify installation">
+    Check that all packages installed correctly:
+    ```bash
+    npm list --depth=0
+    ```
+  </Step>
+</Steps>
+
+## Configuration Files
+
+### Vite Configuration
+
+The Vite configuration is minimal and straightforward:
+
+```typescript frontend/vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+
+**Plugins:**
+- `@vitejs/plugin-react`: Enables React Fast Refresh and JSX transformation
+- `@tailwindcss/vite`: Integrates Tailwind CSS v4 directly into Vite
+
+### Package Scripts
+
+The `package.json` includes these development scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  }
+}
+```
+
+<CodeGroup>
+```bash Start development server
+npm run dev
+```
+
+```bash Build for production
+npm run build
+```
+
+```bash Run linter
+npm run lint
+```
+
+```bash Preview production build
+npm run preview
+```
+</CodeGroup>
+
+## Development Workflow
+
+### Starting the Dev Server
+
+Start the Vite development server with hot module replacement:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173` (default Vite port).
+
+<Note>
+Vite's HMR preserves application state when you save changes, making development faster and more efficient.
+</Note>
+
+### Building for Production
+
+Create an optimized production build:
+
+<Steps>
+  <Step title="Type check with TypeScript">
+    ```bash
+    tsc -b
+    ```
+    
+    This validates your TypeScript code before building.
+  </Step>
+
+  <Step title="Build the application">
+    ```bash
+    npm run build
+    ```
+    
+    This runs both TypeScript compilation and Vite build.
+  </Step>
+
+  <Step title="Preview the build">
+    ```bash
+    npm run preview
+    ```
+    
+    Serves the production build locally for testing.
+  </Step>
+</Steps>
+
+## API Configuration
+
+The frontend communicates with the Cloudflare Workers backend through REST API calls.
+
+### Current Implementation
+
+The API endpoint is currently hardcoded in three locations:
+
+<CodeGroup>
+```typescript hooks/useBookmarkFilter.tsx
+// Fetch all bookmarks
+fetch("https://square-forest-972c.yumnambilson.workers.dev/link/showall")
+```
+
+```typescript components/Card.tsx
+// Delete a bookmark
+fetch(`https://square-forest-972c.yumnambilson.workers.dev/link/delete/${id}`, {
+  method: "DELETE"
+})
+```
+
+```typescript components/Bookmark.tsx
+// Save a new bookmark
+fetch("https://square-forest-972c.yumnambilson.workers.dev/link/save", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data)
+})
+```
+</CodeGroup>
+
+### Recommended: Use Environment Variables
+
+<Warning>
+Hardcoded URLs make it difficult to switch between development and production environments. Use Vite environment variables instead.
+</Warning>
+
+<Steps>
+  <Step title="Create .env file">
+    Create a `.env` file in the `frontend` directory:
+
+    ```bash frontend/.env
+    VITE_API_URL=https://square-forest-972c.yumnambilson.workers.dev
+    ```
+  </Step>
+
+  <Step title="Create API utility">
+    Create a centralized API configuration file:
+
+    ```typescript src/config/api.ts
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
+    export const API_ENDPOINTS = {
+      getAllLinks: `${API_URL}/link/showall`,
+      saveLink: `${API_URL}/link/save`,
+      deleteLink: (id: number) => `${API_URL}/link/delete/${id}`,
+    }
+    ```
+  </Step>
+
+  <Step title="Update components">
+    Replace hardcoded URLs with the API configuration:
+
+    ```typescript
+    import { API_ENDPOINTS } from '../config/api'
+
+    fetch(API_ENDPOINTS.getAllLinks)
+    ```
+  </Step>
+</Steps>
+
+### Environment-Specific Configuration
+
+Create different environment files for various deployment targets:
+
+```bash
+# Development (default)
+frontend/.env
+
+# Local overrides (gitignored)
+frontend/.env.local
+
+# Production
+frontend/.env.production
+
+# Development
+frontend/.env.development
+```
+
+## TypeScript Configuration
+
+The project uses TypeScript 5.9.3 with strict type checking. Type definitions are included for:
+
+- `@types/react` - React type definitions
+- `@types/react-dom` - React DOM type definitions
+- `@types/node` - Node.js type definitions
+
+<Info>
+Vite automatically applies TypeScript checking during development and build processes.
+</Info>
+
+## Styling with Tailwind CSS
+
+The project uses Tailwind CSS v4 with the Vite plugin for optimal performance.
+
+### Tailwind Integration
+
+Tailwind is integrated through the Vite plugin:
+
+```typescript
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+
+<Note>
+Tailwind CSS v4 uses a Vite plugin instead of PostCSS, providing faster builds and better integration.
+</Note>
+
+## Linting and Code Quality
+
+The project uses ESLint with React-specific plugins:
+
+- `eslint` - Core linting engine
+- `eslint-plugin-react-hooks` - Enforces React Hooks rules
+- `eslint-plugin-react-refresh` - Validates Fast Refresh constraints
+- `typescript-eslint` - TypeScript-specific linting rules
+
+### Running the Linter
+
+```bash
+npm run lint
+```
+
+<Info>
+Configure your editor to show ESLint errors inline for immediate feedback while coding.
+</Info>
+
+## Project Structure
+
+The frontend follows this structure:
+
+```
+frontend/
+├── src/
+│   ├── components/     # React components
+│   │   ├── Bookmark.tsx
+│   │   ├── Card.tsx
+│   │   ├── Display.tsx
+│   │   ├── CategoryFilter.tsx
+│   │   ├── Datefilter.tsx
+│   │   ├── Group.tsx
+│   │   ├── Total.tsx
+│   │   ├── Wrapper.tsx
+│   │   ├── Button.tsx
+│   │   └── Backdrop.tsx
+│   ├── hooks/         # Custom React hooks
+│   │   └── useBookmarkFilter.tsx
+│   ├── App.tsx        # Root component
+│   └── main.tsx       # Application entry point
+├── vite.config.ts     # Vite configuration
+├── package.json       # Dependencies and scripts
+└── tsconfig.json      # TypeScript configuration
+```
+
+## Development Tips
+
+<Steps>
+  <Step title="Use React DevTools">
+    Install the [React Developer Tools](https://react.dev/learn/react-developer-tools) browser extension for debugging.
+  </Step>
+
+  <Step title="Enable source maps">
+    Vite generates source maps by default, making debugging easier in browser DevTools.
+  </Step>
+
+  <Step title="Hot Module Replacement">
+    Vite's HMR updates components instantly without full page reloads, preserving application state.
+  </Step>
+
+  <Step title="Type safety">
+    Let TypeScript catch errors before runtime. Run `tsc -b` frequently during development.
+  </Step>
+</Steps>
+
+## Performance Optimization
+
+Vite automatically optimizes your production build:
+
+- **Code splitting**: Automatically splits code into smaller chunks
+- **Tree shaking**: Removes unused code from the final bundle
+- **Minification**: Compresses JavaScript and CSS
+- **Asset optimization**: Optimizes images and other static assets
+
+<Info>
+No additional configuration is needed - Vite handles optimization out of the box.
+</Info>
+
+## Troubleshooting
+
+### Port already in use
+
+If port 5173 is occupied, Vite will try the next available port. You can specify a custom port:
+
+```bash
+vite --port 3000
+```
+
+Or add it to `vite.config.ts`:
+
+```typescript
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 3000
+  }
+})
+```
+
+### Module not found errors
+
+Clear node_modules and reinstall:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### TypeScript errors
+
+Restart your TypeScript server in your editor, or run:
+
+```bash
+tsc -b --clean
+tsc -b
+```
+
+### Build fails
+
+Check for TypeScript errors first:
+
+```bash
+npm run lint
+tsc -b
+```
+
+## Deployment
+
+The production build outputs to the `dist` directory. You can deploy this to:
+
+- **Cloudflare Pages**: Automatic deployments with Git integration
+- **Vercel**: Zero-config deployments for Vite apps
+- **Netlify**: Drag-and-drop or Git deployments
+- **Static hosting**: Any service that serves static files
+
+<CodeGroup>
+```bash Build for deployment
+npm run build
+```
+
+```bash Deploy to Cloudflare Pages (example)
+npx wrangler pages deploy dist
+```
+</CodeGroup>
+
+## Next Steps
+
+- [Environment Variables](/guides/environment) - Configure API endpoints and secrets
+- [Database Setup](/guides/database-setup) - Set up the backend database

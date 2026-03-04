@@ -1,0 +1,331 @@
+---
+title: Database Configuration with Prisma
+description: Set up PostgreSQL database with Prisma ORM and Prisma Accelerate for Cloudflare Workers
+---
+
+Bookmark Deeploy uses Prisma ORM with Prisma Accelerate to enable database access from Cloudflare Workers. This guide walks you through setting up the database schema and running migrations.
+
+## Database Stack
+
+- **Database**: PostgreSQL
+- **ORM**: Prisma Client v7.3.0
+- **Edge Adapter**: Prisma Accelerate (required for Cloudflare Workers)
+- **Migrations**: Prisma Migrate
+
+<Info>
+Prisma Accelerate is required because Cloudflare Workers cannot connect directly to traditional databases. Accelerate provides a connection pooling proxy optimized for edge environments.
+</Info>
+
+## Prerequisites
+
+<Steps>
+  <Step title="PostgreSQL database">
+    You need a PostgreSQL database. You can use:
+    - [Neon](https://neon.tech) (recommended for serverless)
+    - [Supabase](https://supabase.com)
+    - [Railway](https://railway.app)
+    - Self-hosted PostgreSQL
+  </Step>
+
+  <Step title="Prisma Accelerate account">
+    Sign up for [Prisma Accelerate](https://www.prisma.io/accelerate) to get your connection URL.
+  </Step>
+
+  <Step title="Install dependencies">
+    The required packages are already in `package.json`:
+
+    ```bash
+    cd Backend
+    npm install
+    ```
+  </Step>
+</Steps>
+
+## Prisma Schema
+
+The database schema defines two main models: `Category` and `Link`.
+
+```prisma Backend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client"
+  runtime = "cloudflare"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id           Int      @id @default(autoincrement())
+  CategoryName String   @default("no category") @unique
+  links        Link[]
+}
+
+model Link {
+  id          Int       @id @default(autoincrement())
+  url         String
+  Name        String
+  Description String?
+  category    Category  @relation(fields: [CategoryId], references: [id])
+  CategoryId  Int
+  createdAt   DateTime  @default(now())
+}
+```
+
+### Schema Highlights
+
+<Info>
+**Generator Configuration**: The `runtime = "cloudflare"` setting generates a Prisma Client compatible with Cloudflare Workers' runtime environment.
+</Info>
+
+**Model Relationships:**
+- One `Category` can have many `Link` records (one-to-many relationship)
+- Each `Link` must belong to exactly one `Category`
+- Categories default to "no category" if not specified
+
+**Key Fields:**
+- `CategoryName`: Unique constraint prevents duplicate categories
+- `Description`: Optional field (nullable)
+- `createdAt`: Automatically set to current timestamp
+
+## Database Setup
+
+### Step 1: Configure Database Connection
+
+Set up your database URL for migrations. This is different from your Accelerate URL.
+
+```bash
+# Set your direct PostgreSQL connection string
+export DATABASE_URL="postgresql://user:password@host:5432/database"
+```
+
+<Warning>
+Do not use your Prisma Accelerate URL for migrations. Use your direct PostgreSQL connection string instead.
+</Warning>
+
+### Step 2: Run Migrations
+
+The project includes existing migrations that create the database schema:
+
+<CodeGroup>
+```bash Apply existing migrations
+npx prisma migrate deploy
+```
+
+```bash Create a new migration
+npx prisma migrate dev --name your_migration_name
+```
+
+```bash Reset database (caution: deletes all data)
+npx prisma migrate reset
+```
+</CodeGroup>
+
+### Step 3: Generate Prisma Client
+
+Generate the Prisma Client for Cloudflare Workers:
+
+```bash
+npx prisma generate
+```
+
+This creates the client at `Backend/generated/prisma/` as specified in the schema.
+
+## Migration History
+
+The project includes two migrations:
+
+### First Migration (20260104144005)
+
+Creates the initial database structure:
+
+```sql
+-- CreateTable
+CREATE TABLE "Category" (
+    "id" SERIAL NOT NULL,
+    "CategoryName" TEXT NOT NULL DEFAULT 'no category',
+    CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Link" (
+    "id" SERIAL NOT NULL,
+    "url" TEXT NOT NULL,
+    "Name" TEXT NOT NULL,
+    "Description" TEXT,
+    "CategoryId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Link_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Category_CategoryName_key" ON "Category"("CategoryName");
+
+-- AddForeignKey
+ALTER TABLE "Link" ADD CONSTRAINT "Link_CategoryId_fkey" 
+    FOREIGN KEY ("CategoryId") REFERENCES "Category"("id") 
+    ON DELETE RESTRICT ON UPDATE CASCADE;
+```
+
+## Using Prisma in Cloudflare Workers
+
+The application uses Prisma Accelerate to query the database from edge workers.
+
+### Configuration
+
+```typescript Backend/src/link/create.ts
+import { PrismaClient } from '../../generated/prisma/client.js'
+import { withAccelerate } from '@prisma/extension-accelerate'
+
+type Bindings = {
+    DATABASE_URL: string
+}
+
+const getPrismaClient = (databaseUrl: string) => {
+    return new PrismaClient({
+        accelerateUrl: databaseUrl,
+    }).$extends(withAccelerate())
+}
+```
+
+### Usage Example
+
+```typescript
+router.post("/save", async (c) => {
+    const prisma = getPrismaClient(c.env.DATABASE_URL)
+    
+    // Query existing category
+    const existCategory = await prisma.category.findFirst({
+        where: {
+            CategoryName: categoryName
+        }
+    })
+    
+    // Create new link
+    const saveLink = await prisma.link.create({
+        data: {
+            url: body.url,
+            Name: body.Name,
+            Description: body.Description,
+            CategoryId: existCategory.id
+        }
+    })
+})
+```
+
+## Common Prisma Commands
+
+<CodeGroup>
+```bash View database in browser
+npx prisma studio
+```
+
+```bash Format schema file
+npx prisma format
+```
+
+```bash Validate schema
+npx prisma validate
+```
+
+```bash Pull schema from database
+npx prisma db pull
+```
+
+```bash Push schema without migration
+npx prisma db push
+```
+</CodeGroup>
+
+## Prisma Accelerate Setup
+
+<Steps>
+  <Step title="Sign up for Prisma Accelerate">
+    Go to [Prisma Data Platform](https://console.prisma.io/) and create an account.
+  </Step>
+
+  <Step title="Create a new project">
+    Add your PostgreSQL database connection string to the platform.
+  </Step>
+
+  <Step title="Get your Accelerate URL">
+    Copy the Accelerate connection string. It looks like:
+    
+    ```
+    prisma://accelerate.prisma-data.net/?api_key=YOUR_API_KEY
+    ```
+  </Step>
+
+  <Step title="Set as Cloudflare secret">
+    ```bash
+    wrangler secret put DATABASE_URL
+    ```
+    
+    Paste your Accelerate URL when prompted.
+  </Step>
+</Steps>
+
+<Info>
+For local development, add the Accelerate URL to `Backend/.dev.vars`:
+
+```bash
+DATABASE_URL="prisma://accelerate.prisma-data.net/?api_key=YOUR_API_KEY"
+```
+</Info>
+
+## Troubleshooting
+
+### Migration fails with connection error
+
+Ensure you're using a direct PostgreSQL connection string, not the Accelerate URL:
+
+```bash
+# ❌ Wrong - Accelerate URL
+DATABASE_URL="prisma://accelerate.prisma-data.net/..."
+
+# ✅ Correct - Direct connection
+DATABASE_URL="postgresql://user:password@host:5432/database"
+```
+
+### Prisma Client not found
+
+Regenerate the Prisma Client:
+
+```bash
+npx prisma generate
+```
+
+### Type errors with Prisma Client
+
+Ensure TypeScript can find the generated types:
+
+```bash
+npm run cf-typegen
+npx prisma generate
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Always generate after schema changes">
+    Run `npx prisma generate` after modifying `schema.prisma`.
+  </Step>
+
+  <Step title="Use migrations in production">
+    Never use `db push` in production. Always create proper migrations with `migrate dev`.
+  </Step>
+
+  <Step title="Keep migration history">
+    Commit the `prisma/migrations` directory to version control.
+  </Step>
+
+  <Step title="Use connection pooling">
+    Prisma Accelerate handles connection pooling automatically - no additional configuration needed.
+  </Step>
+</Steps>
+
+## Next Steps
+
+- [Environment Variables](/guides/environment) - Configure secrets and environment variables
+- [Frontend Setup](/guides/frontend-setup) - Set up the React frontend

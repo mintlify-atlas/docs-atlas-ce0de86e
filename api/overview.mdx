@@ -1,0 +1,86 @@
+---
+title: 'API Overview'
+description: 'Learn how to interact with the Bookmark Deeploy API to manage your bookmarks programmatically'
+---
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://square-forest-972c.yumnambilson.workers.dev
+```
+
+## Authentication
+
+Currently, the Bookmark Deeploy API does not require authentication. All endpoints are publicly accessible.
+
+<Warning>
+  Since the API is currently unauthenticated, ensure you deploy your own instance for production use to maintain data privacy.
+</Warning>
+
+## Request Format
+
+The API accepts JSON-formatted request bodies. Make sure to include the appropriate `Content-Type` header:
+
+```
+Content-Type: application/json
+```
+
+## Response Format
+
+All API responses are returned in JSON format. Successful responses typically include:
+
+- **2xx status codes** for successful operations
+- **4xx status codes** for client errors
+- **5xx status codes** for server errors
+
+## Data Models
+
+The API uses two primary data models:
+
+### Link Model
+
+```prisma
+model Link {
+  id          Int       @id @default(autoincrement())
+  url         String
+  Name        String
+  Description String?   // Optional field
+  category    Category  @relation(fields: [CategoryId], references: [id])
+  CategoryId  Int
+  createdAt   DateTime  @default(now())
+}
+```
+
+### Category Model
+
+```prisma
+model Category {
+  id           Int      @id @default(autoincrement())
+  CategoryName String   @default("no category")
+  links        Link[]   // One-to-many relationship
+}
+```
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Save Bookmark" icon="bookmark" href="/api/save-bookmark">
+    Create a new bookmark with optional categorization
+  </Card>
+  <Card title="Get Bookmarks" icon="list" href="/api/get-bookmarks">
+    Retrieve all saved bookmarks
+  </Card>
+  <Card title="Delete Bookmark" icon="trash" href="/api/delete-bookmark">
+    Remove a bookmark by ID
+  </Card>
+</CardGroup>
+
+## Rate Limits
+
+There are currently no enforced rate limits on the API. However, please use the API responsibly to ensure optimal performance for all users.
+
+## CORS
+
+The API supports Cross-Origin Resource Sharing (CORS) and can be accessed from any domain.

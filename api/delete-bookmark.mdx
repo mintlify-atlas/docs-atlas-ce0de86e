@@ -1,0 +1,154 @@
+---
+title: 'Delete Bookmark'
+description: 'Remove a bookmark from your collection by ID'
+---
+
+## Endpoint
+
+```
+DELETE /link/delete/:id
+```
+
+Delete a specific bookmark from your collection using its unique identifier.
+
+## Path Parameters
+
+<ParamField path="id" type="number" required>
+  The unique identifier of the bookmark you want to delete. This must be an integer value.
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  A message indicating the operation result:
+  - "link deleted successfully" - when deletion succeeds
+  - "error deleting the link" - when an error occurs
+</ResponseField>
+
+<ResponseField name="deleted" type="object">
+  The deleted bookmark object (only returned on success)
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="number">
+      The unique identifier of the deleted bookmark
+    </ResponseField>
+    
+    <ResponseField name="url" type="string">
+      The URL that was deleted
+    </ResponseField>
+    
+    <ResponseField name="Name" type="string">
+      The bookmark name
+    </ResponseField>
+    
+    <ResponseField name="Description" type="string | null">
+      The bookmark description, or null if not provided
+    </ResponseField>
+    
+    <ResponseField name="CategoryId" type="number">
+      The ID of the associated category
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of when the bookmark was originally created
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+  Error details (only returned when deletion fails)
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://square-forest-972c.yumnambilson.workers.dev/link/delete/42
+```
+
+```javascript JavaScript
+const bookmarkId = 42;
+const response = await fetch(
+  `https://square-forest-972c.yumnambilson.workers.dev/link/delete/${bookmarkId}`,
+  {
+    method: "DELETE",
+  }
+);
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+bookmark_id = 42
+url = f"https://square-forest-972c.yumnambilson.workers.dev/link/delete/{bookmark_id}"
+response = requests.delete(url)
+data = response.json()
+```
+
+</CodeGroup>
+
+## Example Response
+
+<CodeGroup>
+
+```json 200 OK - Success
+{
+  "message": "link deleted successfully",
+  "deleted": {
+    "id": 42,
+    "url": "https://github.com",
+    "Name": "GitHub",
+    "Description": "Code hosting platform",
+    "CategoryId": 5,
+    "createdAt": "2026-03-01T10:30:00.000Z"
+  }
+}
+```
+
+```json 500 Internal Server Error
+{
+  "message": "error deleting the link",
+  "error": {
+    // Error details (e.g., bookmark not found)
+  }
+}
+```
+
+</CodeGroup>
+
+## Behavior Notes
+
+<Warning>
+  **Permanent Deletion**: This operation is permanent and cannot be undone. The bookmark will be completely removed from the database.
+</Warning>
+
+<Info>
+  **Category Preservation**: Deleting a bookmark does not delete its associated category. The category remains in the database even if it has no remaining bookmarks.
+</Info>
+
+## Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Bookmark deleted successfully |
+| 500 | Internal server error (bookmark may not exist, or database error) |
+
+## Common Error Scenarios
+
+The DELETE operation may fail in the following cases:
+
+1. **Bookmark Not Found**: The provided ID doesn't exist in the database
+2. **Invalid ID Format**: The ID parameter is not a valid integer
+3. **Database Connection Error**: Temporary database connectivity issues
+
+## Use Cases
+
+This endpoint is used when:
+
+- Users want to remove outdated or incorrect bookmarks
+- Cleaning up duplicate entries
+- Managing bookmark collections by removing unwanted items
+- Implementing bulk delete operations (call multiple times)

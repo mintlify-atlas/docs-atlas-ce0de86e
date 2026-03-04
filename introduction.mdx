@@ -1,0 +1,114 @@
+---
+title: Introduction
+description: A full-stack bookmark management application built with Cloudflare Workers, React, and PostgreSQL
+---
+
+Bookmark Deeploy is a modern bookmark management SaaS application that helps you organize and categorize your favorite links. Built with cutting-edge technologies, it offers a fast, scalable, and user-friendly solution for managing your web bookmarks.
+
+## What is Bookmark Deeploy?
+
+Bookmark Deeploy allows you to save, organize, and retrieve bookmarks with ease. Each bookmark can be assigned to a category, include a description, and be filtered by date or category for quick access.
+
+## Architecture
+
+The application is built with a modern, serverless architecture:
+
+<CardGroup cols={2}>
+  <Card title="Backend" icon="server">
+    Cloudflare Workers with Hono framework, Prisma ORM, and PostgreSQL database with Accelerate
+  </Card>
+  <Card title="Frontend" icon="react">
+    React 19 with Vite, TypeScript, and TailwindCSS for a responsive user interface
+  </Card>
+</CardGroup>
+
+## Key features
+
+<AccordionGroup>
+  <Accordion title="Bookmark management">
+    Create, view, and delete bookmarks with URLs, names, and optional descriptions. Each bookmark is automatically timestamped when created.
+  </Accordion>
+  
+  <Accordion title="Category organization">
+    Organize bookmarks into categories for better organization. Categories are created automatically when saving a bookmark with a new category name.
+  </Accordion>
+  
+  <Accordion title="Filtering capabilities">
+    Filter your bookmarks by category and date to quickly find what you need. View all bookmarks or filter by specific criteria.
+  </Accordion>
+  
+  <Accordion title="Edge computing">
+    Powered by Cloudflare Workers for low-latency responses and global distribution. The backend runs at the edge, close to your users.
+  </Accordion>
+</AccordionGroup>
+
+## Technology stack
+
+### Backend
+- **Hono** - Lightweight web framework for Cloudflare Workers
+- **Prisma** - Type-safe ORM with Accelerate for connection pooling
+- **PostgreSQL** - Reliable relational database
+- **TypeScript** - Type safety and modern JavaScript features
+
+### Frontend
+- **React 19** - Latest version of the popular UI library
+- **Vite** - Fast build tool and development server
+- **TailwindCSS** - Utility-first CSS framework
+- **TypeScript** - Type-safe frontend development
+
+## API endpoints
+
+Bookmark Deeploy provides a RESTful API for managing bookmarks:
+
+<CodeGroup>
+```typescript POST /link/save
+// Save a new bookmark
+{
+  "url": "https://example.com",
+  "Name": "Example Site",
+  "Description": "An example website",
+  "categoryName": "Development"
+}
+```
+
+```typescript GET /link/showall
+// Retrieve all bookmarks
+// Returns array of bookmarks with category information
+```
+
+```typescript DELETE /link/delete/:id
+// Delete a bookmark by ID
+```
+</CodeGroup>
+
+<Note>
+  All API endpoints use JSON for request and response bodies. The backend includes CORS support for cross-origin requests.
+</Note>
+
+## Database schema
+
+The application uses two main models:
+
+**Category** - Stores bookmark categories
+- `id` - Auto-incrementing primary key
+- `CategoryName` - Category name (defaults to "no category")
+- `links` - Relation to associated bookmarks
+
+**Link** - Stores bookmark information
+- `id` - Auto-incrementing primary key
+- `url` - The bookmark URL
+- `Name` - Display name for the bookmark
+- `Description` - Optional description
+- `CategoryId` - Foreign key to Category
+- `createdAt` - Timestamp of creation
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get up and running with Bookmark Deeploy in minutes
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

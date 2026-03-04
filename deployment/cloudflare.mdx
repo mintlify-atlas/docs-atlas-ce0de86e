@@ -1,0 +1,308 @@
+---
+title: Cloudflare Workers Deployment
+description: Deploy Bookmark Deeploy to Cloudflare Workers for global, serverless execution
+---
+
+Bookmark Deeploy runs on Cloudflare Workers, providing a serverless, globally distributed backend API. This guide walks you through the deployment process.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Wrangler CLI">
+    Install Wrangler globally on your system:
+    ```bash
+    npm install -g wrangler
+    ```
+  </Step>
+  
+  <Step title="Authenticate with Cloudflare">
+    Log in to your Cloudflare account:
+    ```bash
+    wrangler login
+    ```
+  </Step>
+</Steps>
+
+## Wrangler Configuration
+
+The application uses `wrangler.jsonc` for Cloudflare Workers configuration. Here's the current setup:
+
+```json wrangler.jsonc
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "square-forest-972c",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+}
+```
+
+### Configuration Options
+
+| Option | Value | Description |
+|--------|-------|-------------|
+| `name` | `square-forest-972c` | Your Worker name (customize this) |
+| `main` | `src/index.ts` | Entry point for your Worker |
+| `compatibility_date` | `2025-09-27` | Cloudflare Workers compatibility date |
+| `compatibility_flags` | `["nodejs_compat"]` | Enables Node.js compatibility |
+| `observability.enabled` | `true` | Enables monitoring and logging |
+
+<Note>
+  You should update the `name` field to match your project name. This will be the subdomain for your Worker (e.g., `your-name.workers.dev`).
+</Note>
+
+## Setting Environment Variables
+
+Your Worker needs access to the `DATABASE_URL` environment variable to connect to your PostgreSQL database via Prisma Accelerate.
+
+### Using Wrangler CLI
+
+Set secrets using the Wrangler command:
+
+```bash
+wrangler secret put DATABASE_URL
+```
+
+When prompted, paste your Prisma Accelerate connection URL.
+
+<Warning>
+  Never commit your `DATABASE_URL` or other secrets to version control. Always use Wrangler secrets or the Cloudflare Dashboard to manage sensitive data.
+</Warning>
+
+### Using Cloudflare Dashboard
+
+Alternatively, you can set environment variables through the dashboard:
+
+<Steps>
+  <Step title="Navigate to Workers & Pages">
+    Go to your Cloudflare Dashboard and select **Workers & Pages**
+  </Step>
+  
+  <Step title="Select Your Worker">
+    Click on your Worker (e.g., `square-forest-972c`)
+  </Step>
+  
+  <Step title="Open Settings">
+    Navigate to **Settings** > **Variables**
+  </Step>
+  
+  <Step title="Add Environment Variable">
+    Click **Add variable**, set the name to `DATABASE_URL`, paste your Prisma Accelerate URL, and mark it as **Encrypted**
+  </Step>
+</Steps>
+
+## Deployment Process
+
+### Generate Prisma Client
+
+Before deploying, generate the Prisma Client configured for Cloudflare runtime:
+
+```bash
+npx prisma generate
+```
+
+This creates the Prisma Client in `generated/prisma/` with Cloudflare-specific optimizations.
+
+### Deploy to Production
+
+Deploy your Worker using the npm script:
+
+```bash
+npm run deploy
+```
+
+Or directly with Wrangler:
+
+```bash
+wrangler deploy
+```
+
+You should see output similar to:
+
+```
+Total Upload: XX.XX KiB / gzip: XX.XX KiB
+Uploaded square-forest-972c (X.XX sec)
+Published square-forest-972c (X.XX sec)
+  https://square-forest-972c.workers.dev
+Current Deployment ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+<Note>
+  Your Worker will be available at `https://your-worker-name.workers.dev`. You can also add a custom domain in the Cloudflare Dashboard.
+</Note>
+
+## Local Development
+
+Test your Worker locally before deploying:
+
+```bash
+npm run dev
+```
+
+This starts a local development server with hot reloading. Your API will be available at `http://localhost:8787`.
+
+<Warning>
+  Local development requires a `.dev.vars` file with your environment variables:
+  
+  ```bash .dev.vars
+  DATABASE_URL=your-prisma-accelerate-url
+  ```
+  
+  Add `.dev.vars` to your `.gitignore` to prevent committing secrets.
+</Warning>
+
+## Testing Your Deployment
+
+Once deployed, test your API endpoints:
+
+### Health Check
+
+```bash
+curl https://your-worker-name.workers.dev/
+```
+
+Expected response:
+```json
+{
+  "message": "this is the index file"
+}
+```
+
+### Get All Links
+
+```bash
+curl https://your-worker-name.workers.dev/link/showall
+```
+
+### Save a Link
+
+```bash
+curl -X POST https://your-worker-name.workers.dev/link/save \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "Name": "Example Site",
+    "Description": "An example bookmark",
+    "categoryName": "Examples"
+  }'
+```
+
+## Advanced Configuration
+
+### Custom Domains
+
+To use a custom domain:
+
+<Steps>
+  <Step title="Add Domain to Cloudflare">
+    Ensure your domain is managed by Cloudflare
+  </Step>
+  
+  <Step title="Configure Worker Route">
+    In the Cloudflare Dashboard, go to **Workers & Pages** > **Your Worker** > **Triggers** > **Add Custom Domain**
+  </Step>
+  
+  <Step title="Enter Your Domain">
+    Enter your desired domain (e.g., `api.yourdomain.com`) and click **Add Custom Domain**
+  </Step>
+</Steps>
+
+### Smart Placement (Optional)
+
+Enable Smart Placement to automatically run your Worker closer to your database:
+
+```json wrangler.jsonc
+{
+  "placement": { 
+    "mode": "smart" 
+  }
+}
+```
+
+This reduces latency by executing your Worker in a region near your database.
+
+## Monitoring and Logs
+
+Cloudflare provides built-in monitoring for your Workers:
+
+### View Logs
+
+```bash
+wrangler tail
+```
+
+This streams real-time logs from your Worker.
+
+### Analytics
+
+Access detailed analytics in the Cloudflare Dashboard:
+
+- Request volume
+- Error rates
+- Response times
+- CPU time usage
+- Bandwidth consumption
+
+## Troubleshooting
+
+### Deployment Fails
+
+<AccordionGroup>
+  <Accordion title="Authentication Error">
+    Ensure you're logged in to Wrangler:
+    ```bash
+    wrangler whoami
+    wrangler login
+    ```
+  </Accordion>
+  
+  <Accordion title="Build Errors">
+    Clear your build cache and reinstall dependencies:
+    ```bash
+    rm -rf node_modules generated
+    npm install
+    npx prisma generate
+    ```
+  </Accordion>
+  
+  <Accordion title="Missing DATABASE_URL">
+    Verify your secret is set:
+    ```bash
+    wrangler secret list
+    ```
+    If missing, add it:
+    ```bash
+    wrangler secret put DATABASE_URL
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Runtime Errors
+
+<AccordionGroup>
+  <Accordion title="Database Connection Errors">
+    - Verify your Prisma Accelerate URL is correct
+    - Check that your database is accessible from Cloudflare Workers
+    - Ensure you've run database migrations
+  </Accordion>
+  
+  <Accordion title="CORS Issues">
+    The application includes CORS middleware in `src/index.ts`. If you need to restrict origins, update the CORS configuration:
+    
+    ```typescript
+    app.use(cors({
+      origin: ['https://yourdomain.com'],
+      allowMethods: ['GET', 'POST', 'DELETE'],
+    }))
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="Database Setup" icon="database" href="/deployment/database">
+  Configure PostgreSQL and Prisma Accelerate for your Worker
+</Card>

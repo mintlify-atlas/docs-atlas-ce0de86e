@@ -1,0 +1,136 @@
+---
+title: Deployment Overview
+description: Learn how to deploy Bookmark Deeploy to production using Cloudflare Workers
+---
+
+Bookmark Deeploy is built as a serverless application that runs on Cloudflare Workers with a PostgreSQL database accessed through Prisma Accelerate. This architecture provides global distribution, automatic scaling, and excellent performance.
+
+## Architecture
+
+The application consists of two main components:
+
+1. **Backend API**: A Hono.js application running on Cloudflare Workers
+2. **Database**: PostgreSQL database accessed via Prisma Accelerate
+
+### Technology Stack
+
+- **Runtime**: Cloudflare Workers with Node.js compatibility
+- **Framework**: Hono.js v4.11.6
+- **Database ORM**: Prisma v7.3.0
+- **Database Accelerator**: Prisma Accelerate extension v3.0.1
+- **Database**: PostgreSQL
+
+## Deployment Prerequisites
+
+Before deploying, ensure you have:
+
+<Steps>
+  <Step title="Cloudflare Account">
+    Sign up for a [Cloudflare account](https://dash.cloudflare.com/sign-up) with Workers enabled
+  </Step>
+  
+  <Step title="PostgreSQL Database">
+    Set up a PostgreSQL database (Supabase, Neon, Railway, etc.)
+  </Step>
+  
+  <Step title="Prisma Accelerate">
+    Enable Prisma Accelerate for your database connection
+  </Step>
+  
+  <Step title="Wrangler CLI">
+    Install the Wrangler CLI globally:
+    ```bash
+    npm install -g wrangler
+    ```
+  </Step>
+</Steps>
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Configure Database">
+    Set up your PostgreSQL database and obtain your Prisma Accelerate connection URL. See the [Database Setup](/deployment/database) guide for detailed instructions.
+  </Step>
+  
+  <Step title="Configure Cloudflare Workers">
+    Update the Wrangler configuration and set environment variables. See the [Cloudflare Workers](/deployment/cloudflare) guide for details.
+  </Step>
+  
+  <Step title="Generate Prisma Client">
+    Generate the Prisma Client for Cloudflare runtime:
+    ```bash
+    npx prisma generate
+    ```
+  </Step>
+  
+  <Step title="Deploy to Cloudflare">
+    Deploy your application:
+    ```bash
+    npm run deploy
+    ```
+  </Step>
+</Steps>
+
+## Environment Variables
+
+You'll need to configure the following environment variables:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | Prisma Accelerate connection URL | Yes |
+
+<Note>
+  Environment variables in Cloudflare Workers are called "bindings" and can be set via the Wrangler CLI or Cloudflare Dashboard.
+</Note>
+
+## Deployment Commands
+
+The following npm scripts are available for deployment:
+
+```bash
+# Deploy to production
+npm run deploy
+
+# Run locally with Wrangler
+npm run dev
+
+# Start development server
+npm start
+
+# Generate TypeScript types for Cloudflare
+npm run cf-typegen
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Cloudflare Workers Setup" icon="cloud" href="/deployment/cloudflare">
+    Configure and deploy to Cloudflare Workers
+  </Card>
+  <Card title="Database Configuration" icon="database" href="/deployment/database">
+    Set up PostgreSQL and Prisma Accelerate
+  </Card>
+</CardGroup>
+
+## Production Considerations
+
+<Warning>
+  Always use secrets for sensitive data like database connection strings. Never commit them to version control.
+</Warning>
+
+### Performance
+
+- Prisma Accelerate provides connection pooling and query caching
+- Cloudflare Workers automatically scale based on demand
+- Global edge network ensures low latency worldwide
+
+### Monitoring
+
+Cloudflare Workers observability is enabled by default in the configuration, providing:
+
+- Request logs
+- Error tracking
+- Performance metrics
+- Real-time analytics
+
+Access these metrics in your Cloudflare Dashboard under Workers & Pages.

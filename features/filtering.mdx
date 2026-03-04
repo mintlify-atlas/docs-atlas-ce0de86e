@@ -1,0 +1,410 @@
+---
+title: Filtering Capabilities
+description: Filter and search through your bookmarks by date and category
+---
+
+## Overview
+
+Bookmark Deeploy provides powerful filtering capabilities to help you find bookmarks quickly. You can filter by date ranges or by specific categories, making it easy to locate bookmarks even in large collections.
+
+## Filter Types
+
+The application supports two primary filter types:
+
+1. **Date Filters** - Show bookmarks from specific time periods
+2. **Category Filters** - Show bookmarks from specific categories
+
+<Note>
+Filters work independently - you can filter by date or category, but not both simultaneously in the current implementation.
+</Note>
+
+## Date Filtering
+
+### Available Date Ranges
+
+The date filter provides five preset time ranges:
+
+```tsx
+// Date filter configuration from useBookmarkFilter.tsx
+const datefilter = {
+  "today": 1,      // Last 1 day
+  "seven": 7,     // Last 7 days
+  "thirty": 30    // Last 30 days
+}
+```
+
+<Tabs>
+  <Tab title="ALL">
+    Shows every bookmark regardless of creation date. This is the default view.
+  </Tab>
+  <Tab title="TODAY">
+    Shows bookmarks created within the last 24 hours.
+  </Tab>
+  <Tab title="LAST 7 DAYS">
+    Shows bookmarks created within the last week.
+  </Tab>
+  <Tab title="LAST 30 DAYS">
+    Shows bookmarks created within the last month.
+  </Tab>
+  <Tab title="OLDER">
+    Shows bookmarks older than 30 days (implementation pending).
+  </Tab>
+</Tabs>
+
+### Date Filter UI
+
+The date filter component displays as a bordered section:
+
+```tsx
+// From Datefilter.tsx
+<div className="mt-3 border-4 border-black p-4">
+  <div className="flex gap-2 items-center mb-2">
+    <div>
+      <img src="./calender.svg" className="h-6 w-6" />
+    </div>
+    <span className="text-xs tracking-widest font-bold">FILTER BY DATE</span>
+  </div>
+  
+  <div className="flex flex-wrap gap-3" onClick={(e) => {bookMarkfilter(e)}}>
+    <button className="border-2 border-black px-4 py-2 text-xs font-bold tracking-widest transition-colors bg-black text-white" id="all">
+      ALL
+    </button>
+    <button className="border-2 border-black px-4 py-2 text-xs font-bold tracking-widest transition-colors bg-white hover:bg-gray-100" id="today">
+      TODAY
+    </button>
+    <button className="border-2 border-black px-4 py-2 text-xs font-bold tracking-widest transition-colors bg-white hover:bg-gray-100" id="seven">
+      LAST 7 DAYS
+    </button>
+    <button className="border-2 border-black px-4 py-2 text-xs font-bold tracking-widest transition-colors bg-white hover:bg-gray-100" id="thirty">
+      LAST 30 DAYS
+    </button>
+    <button className="border-2 border-black px-4 py-2 text-xs font-bold tracking-widest transition-colors bg-white hover:bg-gray-100">
+      OLDER
+    </button>
+  </div>
+</div>
+```
+
+<Info>
+The "ALL" button has a black background by default to indicate it's the active filter.
+</Info>
+
+### Date Filter Logic
+
+The filtering algorithm calculates the difference between today and the bookmark creation date:
+
+```tsx
+// From useBookmarkFilter.tsx
+function bookMarkfilter(e: any) {
+  const date = e.target.id;
+  
+  if (date == "all") {
+    setFilter("all");
+    setfilterBookmark(bookMark);
+    return;
+  }
+  
+  setFilter(date);
+  
+  const todayTime = new Date().getTime();
+  const filtered = bookMark.filter(bookmark => {
+    const createdTime = new Date(bookmark.createdAt).getTime();
+    const divisor = (1000 * 60 * 60 * 24); // Convert ms to days
+    const daysDifference = (todayTime - createdTime) / divisor;
+    
+    return daysDifference <= datefilter[date];
+  });
+  
+  setfilterBookmark(filtered);
+}
+```
+
+<Accordion title="How the Date Calculation Works">
+<Steps>
+  <Step title="Get Current Time">
+    Convert current date to milliseconds: `new Date().getTime()`
+  </Step>
+  <Step title="Get Bookmark Time">
+    Convert bookmark creation date to milliseconds: `new Date(bookmark.createdAt).getTime()`
+  </Step>
+  <Step title="Calculate Difference">
+    Subtract bookmark time from current time to get milliseconds difference
+  </Step>
+  <Step title="Convert to Days">
+    Divide by `(1000 * 60 * 60 * 24)` to convert milliseconds to days
+  </Step>
+  <Step title="Compare to Threshold">
+    Check if days difference is less than or equal to the filter threshold (1, 7, or 30 days)
+  </Step>
+</Steps>
+</Accordion>
+
+## Category Filtering
+
+### How It Works
+
+Category filtering shows only bookmarks belonging to a specific category:
+
+```tsx
+// From useBookmarkFilter.tsx
+function filterByid(categoryId: number) {
+  const filtered = bookMark.filter(bookmark =>
+    bookmark.CategoryId === categoryId
+  );
+  setfilterBookmark(filtered);
+}
+```
+
+### Category Filter Buttons
+
+Category buttons are automatically generated from your bookmarks:
+
+```tsx
+// From Group.tsx - Extract unique categories
+Array.from(
+  new Map(
+    filterBookmark.map(b => [b.CategoryId, b.category.CategoryName])
+  ).entries()
+).map(([categoryId, categoryName]) => (
+  <CategoryFilterCard 
+    key={categoryId} 
+    CategoryName={categoryName} 
+    CategoryId={categoryId} 
+    filterByid={filterByid} 
+  />
+))
+```
+
+<Tip>
+Category buttons only appear for categories that have at least one bookmark. Empty categories are not displayed.
+</Tip>
+
+### Category Filter UI
+
+```tsx
+// From CategoryFilter.tsx
+<button 
+  className="text-xs p-2 py-2 border-2 border-black font-bold" 
+  data-filter-id={CategoryId} 
+  onClick={() => filterByid(CategoryId)}
+>
+  {CategoryName}
+</button>
+```
+
+## Filter State Management
+
+The filtering system uses React state to manage filtered results:
+
+```tsx
+const [bookMark, setbookMark] = useState<response[]>([]);           // All bookmarks
+const [filter, setFilter] = useState("all");                        // Current filter type
+const [filterBookmark, setfilterBookmark] = useState<response[]>([]); // Filtered results
+```
+
+<Tabs>
+  <Tab title="Initial State">
+    ```tsx
+    // On component mount
+    bookMark: []          // Empty until API fetch
+    filter: "all"         // Default to show all
+    filterBookmark: []    // Empty until API fetch
+    ```
+  </Tab>
+  <Tab title="After Fetch">
+    ```tsx
+    // After fetching from API
+    bookMark: [...]       // All bookmarks from database
+    filter: "all"         // Still default
+    filterBookmark: [...] // Copy of all bookmarks
+    ```
+  </Tab>
+  <Tab title="After Filter">
+    ```tsx
+    // After clicking "TODAY"
+    bookMark: [...]       // Unchanged - still all bookmarks
+    filter: "today"       // Updated to reflect current filter
+    filterBookmark: [...] // Only today's bookmarks
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+The `bookMark` state always contains the complete unfiltered dataset. Only `filterBookmark` is modified by filters. This allows you to switch between filters without re-fetching from the API.
+</Warning>
+
+## Filter Behavior
+
+### Resetting Filters
+
+Click the "ALL" button to reset and show all bookmarks:
+
+```tsx
+if (date == "all") {
+  setFilter("all");
+  setfilterBookmark(bookMark); // Reset to show all bookmarks
+  return;
+}
+```
+
+### Filter Interactions
+
+When you apply a category filter:
+1. Date filter buttons remain visible
+2. You can switch to a date filter (replaces category filter)
+3. You cannot combine date and category filters
+
+<Note>
+The current implementation supports only one active filter at a time. Applying a new filter replaces the previous one.
+</Note>
+
+## Practical Examples
+
+### Example 1: Filter by "LAST 7 DAYS"
+
+```tsx
+// User clicks "LAST 7 DAYS" button
+// Button has id="seven"
+
+// 1. Extract filter ID
+const date = "seven";
+
+// 2. Get current time
+const todayTime = new Date().getTime(); // e.g., 1709550000000
+
+// 3. Filter bookmarks
+const filtered = bookMark.filter(bookmark => {
+  const createdTime = new Date(bookmark.createdAt).getTime();
+  const daysDifference = (todayTime - createdTime) / (1000 * 60 * 60 * 24);
+  return daysDifference <= 7; // Only include if created within 7 days
+});
+
+// 4. Update display
+setfilterBookmark(filtered);
+```
+
+### Example 2: Filter by Category
+
+```tsx
+// User clicks "Development" category button
+// CategoryId = 2
+
+// Filter to only show bookmarks with CategoryId: 2
+const filtered = bookMark.filter(bookmark =>
+  bookmark.CategoryId === 2
+);
+
+setfilterBookmark(filtered);
+
+// Result: Only "Development" bookmarks are visible
+```
+
+## Integration with Display
+
+Filtered bookmarks are passed to the Display component:
+
+```tsx
+// From Group.tsx
+<Display bookMark={filterBookmark} setrefresh={setrefresh} />
+```
+
+The Display component renders bookmarks in a responsive grid:
+
+```tsx
+<div className="grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-1 gap-3 mt-10">
+  <Card bookMark={bookMark} setrefresh={setrefresh} />
+</div>
+```
+
+<Info>
+The Display component doesn't know whether it's receiving filtered or unfiltered data - it simply renders whatever bookmarks it receives.
+</Info>
+
+## useBookmarkFilter Hook
+
+The complete filtering logic is encapsulated in a custom hook:
+
+```tsx
+export function useBookmarkFilter(refresh: number = 0) {
+  const [bookMark, setbookMark] = useState<response[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [filterBookmark, setfilterBookmark] = useState<response[]>([]);
+  
+  // Fetch bookmarks when component mounts or refresh changes
+  useEffect(() => {
+    fetch("https://square-forest-972c.yumnambilson.workers.dev/link/showall")
+      .then(result => result.json())
+      .then(jsonresponse => {
+        setbookMark(jsonresponse.result);
+        setfilterBookmark(jsonresponse.result);
+      });
+  }, [refresh]);
+  
+  // Date filtering function
+  function bookMarkfilter(e: any) {
+    // ... date filter logic
+  }
+  
+  // Category filtering function
+  function filterByid(categoryId: number) {
+    // ... category filter logic
+  }
+  
+  return { bookMark, filter, filterBookmark, bookMarkfilter, filterByid };
+}
+```
+
+<Accordion title="Hook Usage Example">
+```tsx
+function Group({ refresh, setrefresh }) {
+  // Destructure filtering state and functions from hook
+  const { filter, filterBookmark, bookMarkfilter, filterByid } = useBookmarkFilter(refresh);
+  
+  return (
+    <div>
+      {/* Render category filters */}
+      <div className="flex gap-1 flex-wrap">
+        {/* Category buttons */}
+      </div>
+      
+      {/* Render date filter */}
+      <Datefilter bookMarkfilter={bookMarkfilter} />
+      
+      {/* Display filtered bookmarks */}
+      <Display bookMark={filterBookmark} setrefresh={setrefresh} />
+    </div>
+  );
+}
+```
+</Accordion>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Reset Before Switching" icon="rotate-left">
+    Click "ALL" before applying a new filter type for predictable results
+  </Card>
+  <Card title="Use Date Filters for Recent Items" icon="clock">
+    Quickly find recently added bookmarks with "TODAY" or "LAST 7 DAYS"
+  </Card>
+  <Card title="Use Category Filters for Topics" icon="folder">
+    Browse all bookmarks on a specific topic by filtering by category
+  </Card>
+  <Card title="Understand Filter Replacement" icon="arrows-rotate">
+    Remember that applying a new filter replaces the previous one
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="No bookmarks appear after filtering">
+Check if you have bookmarks matching the filter criteria. Try clicking "ALL" to reset and see all bookmarks.
+</Accordion>
+
+<Accordion title="Date filter shows unexpected results">
+The filter uses the `createdAt` timestamp from the database. Ensure your system clock is correct, as it affects the calculation.
+</Accordion>
+
+<Accordion title="Category buttons missing">
+Category buttons only appear for categories that have bookmarks. Create bookmarks in different categories to see more filter options.
+</Accordion>

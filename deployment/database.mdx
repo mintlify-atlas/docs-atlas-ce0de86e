@@ -1,0 +1,469 @@
+---
+title: Database Setup
+description: Configure PostgreSQL and Prisma Accelerate for Bookmark Deeploy
+---
+
+Bookmark Deeploy uses PostgreSQL as its database, accessed through Prisma Accelerate for optimal performance in a serverless environment. This guide covers database setup, configuration, and management.
+
+## Database Architecture
+
+The application uses:
+
+- **Database**: PostgreSQL (any provider)
+- **ORM**: Prisma v7.3.0
+- **Connection Layer**: Prisma Accelerate
+- **Runtime**: Cloudflare Workers compatible
+
+### Why Prisma Accelerate?
+
+Prisma Accelerate provides:
+
+- **Connection Pooling**: Efficient connection management for serverless
+- **Global Caching**: Query result caching at the edge
+- **Reduced Latency**: Optimized for Cloudflare Workers
+- **No Cold Starts**: Pre-warmed database connections
+
+## Prerequisites
+
+<Steps>
+  <Step title="PostgreSQL Database">
+    You need a PostgreSQL database from any provider:
+    - [Supabase](https://supabase.com) (recommended, free tier available)
+    - [Neon](https://neon.tech) (serverless PostgreSQL)
+    - [Railway](https://railway.app)
+    - [PlanetScale](https://planetscale.com)
+    - Any PostgreSQL hosting service
+  </Step>
+  
+  <Step title="Prisma Data Platform Account">
+    Sign up for [Prisma Data Platform](https://console.prisma.io) to use Prisma Accelerate
+  </Step>
+</Steps>
+
+## Database Schema
+
+The application uses the following schema defined in `prisma/schema.prisma`:
+
+```prisma schema.prisma
+generator client {
+  provider = "prisma-client"
+  runtime = "cloudflare"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id           Int    @id @default(autoincrement())
+  CategoryName String @default("no category")
+  links        Link[]
+}
+
+model Link {
+  id          Int       @id @default(autoincrement())
+  url         String
+  Name        String
+  Description String?
+  category    Category  @relation(fields: [CategoryId], references: [id])
+  CategoryId  Int
+  createdAt   DateTime  @default(now())
+}
+```
+
+### Schema Overview
+
+<AccordionGroup>
+  <Accordion title="Category Model">
+    Stores bookmark categories:
+    - `id`: Auto-incrementing primary key
+    - `CategoryName`: Category name (defaults to "no category")
+    - `links`: One-to-many relationship with links
+  </Accordion>
+  
+  <Accordion title="Link Model">
+    Stores individual bookmarks:
+    - `id`: Auto-incrementing primary key
+    - `url`: The bookmark URL
+    - `Name`: Display name for the bookmark
+    - `Description`: Optional description
+    - `CategoryId`: Foreign key to Category
+    - `createdAt`: Timestamp of creation
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  The generator is configured with `runtime = "cloudflare"` to create a Prisma Client optimized for Cloudflare Workers.
+</Note>
+
+## Setup Steps
+
+### 1. Create PostgreSQL Database
+
+Choose a provider and create a new PostgreSQL database. You'll receive a connection string like:
+
+```
+postgresql://username:password@host:5432/database
+```
+
+<Warning>
+  Keep this connection string secure. You'll use it to set up Prisma Accelerate, but never expose it in your application code.
+</Warning>
+
+### 2. Set Up Prisma Accelerate
+
+<Steps>
+  <Step title="Log in to Prisma Data Platform">
+    Visit [console.prisma.io](https://console.prisma.io) and sign in
+  </Step>
+  
+  <Step title="Create a New Project">
+    Click **New Project** and give it a name (e.g., "Bookmark Deeploy")
+  </Step>
+  
+  <Step title="Enable Accelerate">
+    Navigate to **Accelerate** and click **Enable Accelerate**
+  </Step>
+  
+  <Step title="Add Database Connection">
+    Paste your PostgreSQL connection string from step 1
+  </Step>
+  
+  <Step title="Get Accelerate URL">
+    Copy your Prisma Accelerate connection URL. It will look like:
+    ```
+    prisma://accelerate.prisma-data.net/?api_key=your-api-key
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Your Prisma Accelerate URL is what you'll use as the `DATABASE_URL` environment variable in Cloudflare Workers.
+</Note>
+
+### 3. Configure Database URL
+
+For local development, create a `.dev.vars` file:
+
+```bash .dev.vars
+DATABASE_URL=prisma://accelerate.prisma-data.net/?api_key=your-api-key
+```
+
+For production, set the secret in Cloudflare Workers:
+
+```bash
+wrangler secret put DATABASE_URL
+```
+
+Paste your Prisma Accelerate URL when prompted.
+
+### 4. Run Database Migrations
+
+Create the database tables by running migrations:
+
+```bash
+npx prisma migrate dev --name init
+```
+
+This creates the `Category` and `Link` tables in your PostgreSQL database.
+
+<Warning>
+  For production databases, use:
+  ```bash
+  npx prisma migrate deploy
+  ```
+  This applies migrations without interactive prompts.
+</Warning>
+
+### 5. Generate Prisma Client
+
+Generate the Prisma Client for Cloudflare Workers:
+
+```bash
+npx prisma generate
+```
+
+This creates the client in `generated/prisma/` with Cloudflare runtime support.
+
+## Database Connection in Code
+
+The application establishes database connections using Prisma Accelerate. Here's how it's implemented:
+
+```typescript src/link/create.ts
+import { PrismaClient } from '../../generated/prisma/client.js'
+import { withAccelerate } from '@prisma/extension-accelerate'
+
+type Bindings = {
+  DATABASE_URL: string
+}
+
+const getPrismaClient = (databaseUrl: string) => {
+  return new PrismaClient({
+    accelerateUrl: databaseUrl,
+  }).$extends(withAccelerate())
+}
+
+// Usage in route handler
+router.post("/save", async (c) => {
+  const prisma = getPrismaClient(c.env.DATABASE_URL)
+  // ... database operations
+})
+```
+
+### Key Features
+
+- **Bindings Type**: Defines `DATABASE_URL` as an environment variable
+- **Helper Function**: `getPrismaClient()` creates a Prisma Client with Accelerate
+- **Extension**: `withAccelerate()` enables caching and connection pooling
+- **Per-Request Client**: Each request gets a fresh Prisma Client instance
+
+## Database Operations
+
+The application performs the following database operations:
+
+### Create Link with Category
+
+```typescript
+// Check if category exists
+const existCategory = await prisma.category.findFirst({
+  where: { CategoryName: categoryName }
+})
+
+if (existCategory) {
+  // Use existing category
+  const saveLink = await prisma.link.create({
+    data: {
+      url: body.url,
+      Name: body.Name,
+      Description: body.Description,
+      CategoryId: existCategory.id
+    }
+  })
+} else {
+  // Create new category first
+  const saveCategory = await prisma.category.create({
+    data: { CategoryName: categoryName }
+  })
+  
+  // Then create link
+  const saveLink = await prisma.link.create({
+    data: {
+      url: body.url,
+      Name: body.Name,
+      Description: body.Description,
+      CategoryId: saveCategory.id
+    }
+  })
+}
+```
+
+### Fetch All Links
+
+```typescript
+const getallLinks = await prisma.link.findMany({
+  select: {
+    id: true,
+    url: true,
+    Name: true,
+    createdAt: true,
+    Description: true,
+    CategoryId: true,
+    category: {
+      select: {
+        CategoryName: true
+      }
+    }
+  }
+})
+```
+
+### Delete Link
+
+```typescript
+const deletedResponse = await prisma.link.delete({
+  where: { id: id }
+})
+```
+
+## Database Management
+
+### Prisma Studio
+
+View and edit your database using Prisma Studio:
+
+```bash
+npx prisma studio
+```
+
+This opens a web interface at `http://localhost:5555` for database management.
+
+### Migrations
+
+<CodeGroup>
+
+```bash Create Migration
+npx prisma migrate dev --name description_of_changes
+```
+
+```bash Apply Migrations
+npx prisma migrate deploy
+```
+
+```bash Reset Database
+npx prisma migrate reset
+```
+
+```bash View Migration Status
+npx prisma migrate status
+```
+
+</CodeGroup>
+
+<Warning>
+  `prisma migrate reset` drops all data and recreates the database. Only use in development.
+</Warning>
+
+### Seeding (Optional)
+
+To add initial data, create a seed script:
+
+```typescript prisma/seed.ts
+import { PrismaClient } from '../generated/prisma/client'
+
+const prisma = new PrismaClient()
+
+async function main() {
+  // Create default category
+  const defaultCategory = await prisma.category.create({
+    data: {
+      CategoryName: 'no category'
+    }
+  })
+
+  // Create sample links
+  await prisma.link.createMany({
+    data: [
+      {
+        url: 'https://example.com',
+        Name: 'Example',
+        Description: 'An example bookmark',
+        CategoryId: defaultCategory.id
+      }
+    ]
+  })
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect())
+```
+
+Run the seed:
+
+```bash
+ts-node prisma/seed.ts
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection Errors">
+    **Issue**: Cannot connect to database
+    
+    **Solutions**:
+    - Verify your `DATABASE_URL` is set correctly
+    - Check that your Prisma Accelerate API key is valid
+    - Ensure your database is accessible (not behind a firewall)
+    - Test the connection with `npx prisma db pull`
+  </Accordion>
+  
+  <Accordion title="Migration Failures">
+    **Issue**: Migrations fail to apply
+    
+    **Solutions**:
+    - Check database permissions (need CREATE, ALTER, DROP)
+    - Review migration files in `prisma/migrations/`
+    - Use `npx prisma migrate status` to check current state
+    - For production, ensure you use `migrate deploy` not `migrate dev`
+  </Accordion>
+  
+  <Accordion title="Type Generation Issues">
+    **Issue**: TypeScript errors with Prisma Client
+    
+    **Solutions**:
+    - Regenerate client: `npx prisma generate`
+    - Verify `output` path in schema: `../generated/prisma`
+    - Check `runtime` is set to `cloudflare`
+    - Restart your TypeScript server
+  </Accordion>
+  
+  <Accordion title="Query Performance">
+    **Issue**: Slow database queries
+    
+    **Solutions**:
+    - Enable Prisma Accelerate caching:
+      ```typescript
+      await prisma.link.findMany({
+        cacheStrategy: { ttl: 60 }
+      })
+      ```
+    - Add database indexes for frequently queried fields
+    - Use `select` to fetch only needed fields
+    - Monitor query performance in Prisma Data Platform
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+<Warning>
+  Follow these security practices to protect your database:
+</Warning>
+
+1. **Never commit secrets**: Add `.env`, `.dev.vars` to `.gitignore`
+2. **Use Accelerate**: Never expose your direct database URL to Workers
+3. **Restrict access**: Configure database firewall rules if available
+4. **Regular backups**: Enable automated backups with your database provider
+5. **Monitor access**: Review connection logs regularly
+6. **Update dependencies**: Keep Prisma and related packages up to date
+
+## Performance Optimization
+
+### Connection Pooling
+
+Prisma Accelerate automatically manages connection pooling. No additional configuration needed.
+
+### Query Caching
+
+Enable caching for read-heavy operations:
+
+```typescript
+const links = await prisma.link.findMany({
+  cacheStrategy: { 
+    ttl: 60,     // Cache for 60 seconds
+    swr: 10      // Serve stale data for 10 seconds while revalidating
+  }
+})
+```
+
+### Indexes
+
+Add indexes to your schema for better query performance:
+
+```prisma
+model Link {
+  id          Int       @id @default(autoincrement())
+  url         String    @unique  // Add unique index
+  CategoryId  Int
+  createdAt   DateTime  @default(now())
+  
+  @@index([CategoryId])         // Add index for foreign key
+  @@index([createdAt(sort: Desc)])  // Add index for sorting
+}
+```
+
+## Next Steps
+
+<Card title="Cloudflare Workers Deployment" icon="cloud" href="/deployment/cloudflare">
+  Deploy your configured database to Cloudflare Workers
+</Card>
