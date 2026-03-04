@@ -1,0 +1,80 @@
+{
+  "projectType": "saas",
+  "projectName": "Bookmark Deeploy",
+  "projectDescription": "A full-stack bookmark management application for organizing and categorizing your favorite links",
+  "theme": "almond",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#2563EB",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/bookmarks",
+              "features/categories",
+              "features/filtering"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/overview",
+              "deployment/cloudflare",
+              "deployment/database"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/save-bookmark",
+              "api/get-bookmarks",
+              "api/delete-bookmark"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Configuration",
+            "pages": [
+              "guides/environment",
+              "guides/database-setup",
+              "guides/frontend-setup"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Save and organize bookmarks with custom categories",
+    "Filter bookmarks by category and date",
+    "Cloudflare Workers backend with Prisma ORM",
+    "React frontend with TailwindCSS",
+    "PostgreSQL database with Prisma Accelerate"
+  ],
+  "publicApiSurface": [
+    "POST /link/save - Save a new bookmark with category",
+    "GET /link/showall - Retrieve all bookmarks with category info",
+    "DELETE /link/delete/:id - Delete a bookmark by ID"
+  ]
+}
